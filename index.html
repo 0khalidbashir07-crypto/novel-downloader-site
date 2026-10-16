@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chinese Novel Downloader</title>
+<meta name="description" content="Turn any web novel's table of contents into one clean TXT or EPUB file. Runs privately on your own computer.">
+<style>
+  :root {
+    --bg: #F7F6F3; --surface: #FFFFFF; --surface-2: #F1EFEA; --border: #E7E2D9;
+    --text: #221E1A; --muted: #756D60; --accent: #BE4331; --accent-hover: #A6392A;
+    --accent-bg: #F7E6E1; --accent-contrast: #FFFFFF; --success: #3D7A5C;
+    --console-bg: #0C0B09; --console-text: #D8D4CB; --console-ts: #726B5D; --console-ok: #4FAE85;
+    --shadow: 0 1px 2px rgba(30,24,18,.04), 0 8px 24px rgba(30,24,18,.06);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16130F; --surface: #1E1A15; --surface-2: #27201A; --border: #372F26;
+      --text: #F1ECE3; --muted: #9C9384; --accent: #E0604A; --accent-hover: #C94F3B;
+      --accent-bg: #35201A; --accent-contrast: #1A0D09; --success: #4FAE85;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; }
+  a { color: var(--accent); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  nav { display: flex; align-items: center; gap: 12px; padding: 22px 0; }
+  .mark { width: 34px; height: 34px; border-radius: 8px; background: var(--accent); color: var(--accent-contrast);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; font-weight: 600; }
+  nav strong { font-size: 1.05rem; letter-spacing: -.01em; }
+  nav .links { margin-left: auto; display: flex; gap: 20px; font-size: .875rem; }
+  nav .links a { color: var(--muted); text-decoration: none; }
+  nav .links a:hover { color: var(--text); }
+
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 28px; align-items: center; padding: 36px 0 56px; }
+  h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.1; letter-spacing: -.03em; margin: 0 0 16px; text-wrap: balance; }
+  .lede { font-size: 1.125rem; color: var(--muted); margin: 0 0 26px; max-width: 46ch; }
+  .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; height: 42px; padding: 0 20px; border-radius: 9px; font-weight: 600;
+    font-size: .9375rem; text-decoration: none; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .art { position: relative; height: 380px; overflow: hidden; display: flex; justify-content: center; pointer-events: none; }
+  .art img { height: 520px; width: auto; opacity: .6;
+    -webkit-mask-image: radial-gradient(ellipse 65% 42% at 50% 38%, #000 40%, transparent 78%);
+    mask-image: radial-gradient(ellipse 65% 42% at 50% 38%, #000 40%, transparent 78%); }
+
+  section { padding: 48px 0; }
+  h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 28px; max-width: 60ch; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+  .card h3 { font-size: .9375rem; margin: 0 0 6px; }
+  .card p { margin: 0; font-size: .875rem; color: var(--muted); }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .step .n { display: inline-flex; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-bg); color: var(--accent);
+    font-weight: 700; font-size: .875rem; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .step h3 { margin: 0 0 4px; font-size: .9375rem; }
+  .step p { margin: 0; font-size: .875rem; color: var(--muted); }
+
+  .console { background: var(--console-bg); border-radius: 16px; overflow: hidden; border: 1px solid #211C15; box-shadow: var(--shadow); }
+  .console .bar { height: 3px; background: var(--accent); }
+  .console pre { margin: 0; padding: 18px 22px 20px; font: .8125rem/1.7 var(--mono); color: var(--console-text); overflow-x: auto; }
+  .ts { color: var(--console-ts); } .ok { color: var(--console-ok); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; }
+  .pill { display: inline-block; font-size: .75rem; font-weight: 600; background: var(--accent-bg); color: var(--accent);
+    border-radius: 999px; padding: 4px 11px; margin-bottom: 12px; }
+  ul.tick { list-style: none; padding: 0; margin: 0; }
+  ul.tick li { padding: 6px 0 6px 26px; position: relative; font-size: .9375rem; }
+  ul.tick li::before { content: ""; position: absolute; left: 3px; top: 13px; width: 9px; height: 5px; border-left: 2px solid var(--success);
+    border-bottom: 2px solid var(--success); transform: rotate(-45deg); }
+
+  footer { border-top: 1px solid var(--border); padding: 28px 0 40px; margin-top: 24px; color: var(--muted); font-size: .8125rem; }
+
+  @media (max-width: 720px) {
+    .hero, .two, .steps { grid-template-columns: 1fr; }
+    .art { height: 260px; order: -1; } .art img { height: 380px; }
+    nav .links { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <span class="mark" aria-hidden="true">卷</span>
+    <strong>Chinese Novel Downloader</strong>
+    <div class="links"><a href="#features">Features</a><a href="#how">How it works</a><a href="#sites">Any site</a><a href="#private">Private</a></div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1>A whole web novel, in one clean file.</h1>
+      <p class="lede">Paste a novel's table-of-contents link. Get every chapter, in order, as a single TXT or EPUB you can read anywhere.</p>
+      <div class="cta">
+        <a class="btn primary" href="#how">See how it works</a>
+        <a class="btn" href="#features">What it does</a>
+      </div>
+    </div>
+    <div class="art" aria-hidden="true"><img src="dragon.jpg" alt=""></div>
+  </header>
+
+  <section id="features">
+    <h2>Built for long reads</h2>
+    <p class="sub">Everything a serial novel needs to survive the trip from a website to your e-reader.</p>
+    <div class="grid">
+      <div class="card"><h3>Every chapter, in order</h3><p>Reads the table of contents and follows the real reading order, even when a "latest updates" box repeats part of the list.</p></div>
+      <div class="card"><h3>Split chapters, merged</h3><p>Chapters broken across several pages are stitched back together into one.</p></div>
+      <div class="card"><h3>Ads stripped out</h3><p>Removes "bookmark us" boilerplate and promo lines so the text reads clean. One toggle.</p></div>
+      <div class="card"><h3>TXT or EPUB</h3><p>Plain text for anything, or a proper EPUB with a chapter list, title and author for your reader app.</p></div>
+      <div class="card"><h3>Pick a chapter range</h3><p>Only want chapters 100 to 250? Set From and To, and the filename reflects it.</p></div>
+      <div class="card"><h3>Live progress</h3><p>Watch each chapter land in a running log, with a progress bar and a Cancel button.</p></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>Three steps</h2>
+    <p class="sub">No account, no setup screen.</p>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><h3>Paste the link</h3><p>The table-of-contents page of the novel you want.</p></div>
+      <div class="step"><span class="n">2</span><h3>Choose options</h3><p>Remove ads, TXT or EPUB, and an optional chapter range.</p></div>
+      <div class="step"><span class="n">3</span><h3>Download</h3><p>Start, watch it run, then save one file.</p></div>
+    </div>
+    <div class="console" style="margin-top:20px" aria-label="Example of the live log">
+      <div class="bar"></div>
+<pre><span class="ts">[10:42:01]</span> Parsed table of contents — 451 chapters found
+<span class="ts">[10:42:02]</span> [1/451] #1 第1章 这逼班，老子一天也不想上了
+<span class="ts">[10:42:02]</span> [2/451] #2 第2章 车间里的暑假工 <span class="ok">merged 2 parts</span>
+<span class="ts">[10:42:03]</span> [3/451] #3 第3章 好感度涨得很快 <span class="ok">removed 3 ad paragraph(s)</span>
+<span class="ts">[10:42:41]</span> Done! 451/451 chapters written.</pre>
+    </div>
+  </section>
+
+  <section id="sites">
+    <div class="two">
+      <div>
+        <span class="pill">Works beyond one site</span>
+        <h2>Add any novel site yourself</h2>
+        <p class="sub">If a site isn't handled out of the box, teach the app once: point it at the chapter list and the chapter text, check the live preview, and save. Every future link from that site just works.</p>
+      </div>
+      <ul class="tick">
+        <li>Live preview before you save, so a wrong selector shows up immediately</li>
+        <li>Paste-the-page-source fallback when a site can't be fetched directly</li>
+        <li>Optional AI auto-detect: bring your own free Gemini key and it proposes the selectors for you</li>
+        <li>Remembers your settings between sessions</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="private">
+    <div class="two">
+      <div>
+        <span class="pill">Runs on your computer</span>
+        <h2>Private by design</h2>
+        <p class="sub">It's a small local web app that opens in your browser. Downloads, saved sites, and your API key stay on your machine. Nothing is sent to a server we run.</p>
+      </div>
+      <ul class="tick">
+        <li>Mac app you double-click to launch</li>
+        <li>Windows build available</li>
+        <li>No sign-up, no tracking</li>
+        <li>Optional password-protected hosting if you want it on your own server</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Respect each site's terms and the authors' rights. Use it for personal reading, and support the writers you enjoy.</p>
+  </footer>
+</div>
+</body>
+</html>
